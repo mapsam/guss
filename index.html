@@ -1,0 +1,89 @@
+<html>
+  <head>
+    <script src="https://apis.google.com/js/client.js?onload=init"></script>
+    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
+    <script type="text/javascript">
+      
+    // AUTH URL  
+    // https://accounts.google.com/o/oauth2/auth?client_id=435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com&redirect_uri=http://localhost:8000&response_type=token&scope=https://www.googleapis.com/auth/drive&state=gus
+
+    function init() {
+      gapi.client.setApiKey('435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com');
+      gapi.client.load('urlshortener', 'v1');
+    }
+
+    var res;
+    var clientID = "435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com";
+    var access_token;
+    const boundary = '--waka';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const close_delim = "\r\n--" + boundary + "--";
+    var json = JSON.stringify({
+      'title': "wakaflaka",
+      'mimeType': "application/octet-stream"
+    });
+    var multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        json +
+        delimiter +
+        'Content-Type: application/octet-stream\r\n' +
+        'Content-Transfer-Encoding: base64\r\n' +
+        '\r\n' +
+        close_delim;
+    console.log(multipartRequestBody);
+
+
+    $(document).ready(function(){
+      if(window.location.href!=="http://localhost:8000/") {
+        var params = {}, queryString = location.hash.substring(1),
+            regex = /([^&=]+)=([^&]*)/g, m;
+        while (m = regex.exec(queryString)) {
+          params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+        }
+        access_token = params.access_token; // global scope
+        $.ajax({
+          url: "https://www.googleapis.com/oauth2/v1/tokeninfo?access_token="+params.access_token,
+          type: "POST",
+          success: function(e) {
+            if(e.audience==clientID) {
+              res = e; // global scope
+              insertFile(e);
+            } else {
+              // handle tampered clientID
+            }
+          },
+          error: function(e) {
+            // expired token
+            // invalid response
+            console.error(e);
+          }
+        });
+      }
+    });
+
+    function insertFile() {
+      var request = gapi.client.request({
+          'path': '/upload/drive/v2/files?access_token='+access_token,
+          'method': 'POST',
+          'params': {
+            'uploadType': 'multipart',
+            'mimeType': 'application/vnd.google-apps.spreadsheet'
+          },
+          'headers': {
+            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+          },
+          'body': multipartRequestBody
+        });
+      request.execute(callback);
+    }
+
+    function callback(e) {
+      console.log(e);
+    }
+    </script>
+  </head>
+  <body>
+    <a href="https://accounts.google.com/o/oauth2/auth?client_id=435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com&redirect_uri=http://localhost:8000&response_type=token&scope=https://www.googleapis.com/auth/drive&state=gus">Build a new gus</a>
+  </body>
+</html>

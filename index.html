@@ -15,24 +15,10 @@
     var res;
     var clientID = "435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com";
     var access_token;
-    const boundary = '--waka';
-    const delimiter = "\r\n--" + boundary + "\r\n";
-    const close_delim = "\r\n--" + boundary + "--";
-    var json = JSON.stringify({
-      'title': "wakaflaka",
-      'mimeType': "application/octet-stream"
-    });
-    var multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json\r\n\r\n' +
-        json +
-        delimiter +
-        'Content-Type: application/octet-stream\r\n' +
-        'Content-Transfer-Encoding: base64\r\n' +
-        '\r\n' +
-        close_delim;
-    console.log(multipartRequestBody);
+    var str_data = 'COLUMN1,COLUMN2,COLUMN3,COLUMN4,COLUMN5\n1,2,3,4,5';
+    var ablob = new Blob( [ str_data ], { type : 'text/csv', title : 'GUS TITLE', description : 'MAPPING DB' } );
 
+    
 
     $(document).ready(function(){
       if(window.location.href!=="http://localhost:8000/") {
@@ -48,7 +34,9 @@
           success: function(e) {
             if(e.audience==clientID) {
               res = e; // global scope
-              insertFile(e);
+              insertFile( ablob, function( d ) {
+                console.log( "[ SUCCESS ]: ", d );
+              });
             } else {
               // handle tampered clientID
             }
@@ -62,28 +50,60 @@
       }
     });
 
-    function insertFile() {
-      var request = gapi.client.request({
-          'path': '/upload/drive/v2/files?access_token='+access_token,
-          'method': 'POST',
-          'params': {
-            'uploadType': 'multipart',
-            'mimeType': 'application/vnd.google-apps.spreadsheet'
-          },
-          'headers': {
-            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-          },
-          'body': multipartRequestBody
-        });
-      request.execute(callback);
+
+    function insertFile(fileData, callback) {
+      console.log( fileData );
+      const boundary = '-------314159265358979323846';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const close_delim = "\r\n--" + boundary + "--";
+
+      var reader = new FileReader();
+      reader.readAsBinaryString(fileData);
+      reader.onload = function(e) {
+        var contentType = fileData.type || 'application/octet-stream';
+        var metadata = {
+          'title': 'GUS TITLE' ,
+          'description': 'MAPPING DB' ,
+          'mimeType': contentType
+        };
+
+        var base64Data = btoa(reader.result);
+        var multipartRequestBody =
+            delimiter +
+            'Content-Type: application/json\r\n\r\n' +
+            JSON.stringify(metadata) +
+            delimiter +
+            'Content-Type: ' + contentType + '\r\n' +
+            'Content-Transfer-Encoding: base64\r\n' +
+            '\r\n' +
+            base64Data +
+            close_delim;
+
+        var request = gapi.client.request({
+            'path': '/upload/drive/v2/files',
+            'method': 'POST',
+            'params': { 
+                uploadType : "multipart" , 
+                convert : true  ,
+                access_token : access_token 
+            },
+            'headers': {
+              'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+            },
+            'body': multipartRequestBody});
+        if (!callback) {
+          callback = function(file) {
+            console.log(file)
+          };
+        }
+        request.execute(callback);
+      }
     }
 
-    function callback(e) {
-      console.log(e);
-    }
     </script>
   </head>
   <body>
     <a href="https://accounts.google.com/o/oauth2/auth?client_id=435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com&redirect_uri=http://localhost:8000&response_type=token&scope=https://www.googleapis.com/auth/drive&state=gus">Build a new gus</a>
   </body>
 </html>
+

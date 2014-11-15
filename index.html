@@ -1,11 +1,22 @@
 <html>
   <head>
-    <script src="https://apis.google.com/js/client.js?onload=init"></script>
-    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
-    <script type="text/javascript" src="static/js/auth.js"></script>
   </head>
   <body>
     <a href="https://accounts.google.com/o/oauth2/auth?client_id=435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com&redirect_uri=http://localhost:8000&response_type=token&scope=https://www.googleapis.com/auth/drive&state=gus">Build a new gus</a>
+  <script type="text/javascript" src="static/js/auth.js"></script>
+  <script>
+    /*
+    **
+    **  entry point is a callback to retrieving gapi library
+    **  see <script src="https://apis.google.com/js/client.js?onload=init_app"> above
+    **
+    */
+    function init_app () {
+        window.App = window.App || {};
+        App.main = new App.MainController();       
+    };
+  </script>
+  <script src="https://apis.google.com/js/client.js?onload=init_app"></script>
   </body>
 </html>
 

@@ -12,20 +12,45 @@ var MainController = function( options ) {
     options = options || {};
 
     // controller members
-    this.res;
+    this.scope = "https://www.googleapis.com/auth/drive";
+    this.state = "new_gus";
     this.clientID = "435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com";
     this.access_token;
     this.str_data = 'lat,lng,column1,data2,another3\n46.75679833,-114.0816879,Lolo,john,something\n46.87333583,-113.9886475,Missoula,sarah,something else\n46.757439,-114.081923,Gas Station,sam,this information can be anything you want!';
     this.ablob = new Blob( [ this.str_data ], { type : 'text/csv', title : 'GUS TITLE', description : 'MAPPING DB' } );
 
+    // event listeners
+    this.bind_event_listeners();
+
     // initialize
-    this.init();
+    gapi.client.setApiKey( this.clientID );
+    // this.init();
 };
 
 
 /*
 **
 **  functions
+**
+*/
+MainController.prototype.bind_event_listeners = function() {
+
+    // build new gus click event
+    document.getElementById('build').addEventListener('click', function(e) {
+        console.log( "[ CLICK EVENT ]" );
+        e.preventDefault();
+        this.authorize_access_token();
+    }.bind( this ), false);
+
+};
+
+
+/*
+** 
+**  when using gapi.auth.authorize
+**  this function is deprecated
+**  b/c we are not getting access token through
+**  a URL redirect query params
 **
 */
 MainController.prototype.init = function() {
@@ -40,6 +65,14 @@ MainController.prototype.init = function() {
 };
 
 
+/*
+** 
+**  when using gapi.auth.authorize
+**  this function is deprecated
+**  b/c we are not getting access token through
+**  a URL redirect query params
+**
+*/
 MainController.prototype.is_access_token_cb = function() {
     console.log( "[ IS_ACCESS_TOKEN ]" );
 
@@ -71,6 +104,14 @@ MainController.prototype.set_access_token = function() {
 };
 
 
+/*
+** 
+**  when using gapi.auth.authorize
+**  this function is deprecated
+**  b/c we are not getting access token through
+**  a URL redirect query params
+**
+*/
 MainController.prototype.remove_query_params = function() {
     console.log( "[ REMOVE_QUERY_PARAMS ]" );
 
@@ -104,16 +145,30 @@ MainController.prototype.remove_query_params = function() {
 **
 */
 MainController.prototype.authorize_access_token = function() {
+    console.log( "[ AUTHORIZE_ACCESS_TOKEN ]" );
 
     gapi.auth.authorize({
         client_id: this.clientID, 
         scope: this.scope, 
-        immediate: true}, 
-        some_kind_of_callback_here
+        immediate: true
+        }, 
+        this.qc_access_token.bind( this )
     );
 
 };
 
+MainController.prototype.qc_access_token = function( token_object ) {
+
+    if ( token_object.error ) {
+        console.error( "[ ERROR ]: token could not be set: ", token_object.error, token_object );
+        return false;
+    }
+    
+    this.access_token = token_object.access_token;
+    this.set_access_token();
+    this.insert_file();
+
+};
 
 MainController.prototype.insert_file = function( ) {
     console.log( "[ INSERT_FILE ]" );

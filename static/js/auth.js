@@ -7,15 +7,16 @@ window.App = window.App || {};
 **  constructor
 **
 */
-var MainController = function( options ) {
+var GussController = function( options ) {
     console.log( "[ CONSTRUCTOR ]" );
     options = options || {};
 
     // controller members
     this.scope = "https://www.googleapis.com/auth/drive";
     this.state = "new_gus";
+    this.token_expirey; // set after authorize
     this.clientID = "435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com";
-    this.access_token;
+    this.access_token; // set after authorize
     this.str_data = 'lat,lng,column1,data2,another3\n46.75679833,-114.0816879,Lolo,john,something\n46.87333583,-113.9886475,Missoula,sarah,something else\n46.757439,-114.081923,Gas Station,sam,this information can be anything you want!';
     this.ablob = new Blob( [ this.str_data ], { type : 'text/csv', title : 'GUS TITLE', description : 'MAPPING DB' } );
 
@@ -33,13 +34,31 @@ var MainController = function( options ) {
 **  functions
 **
 */
-MainController.prototype.bind_event_listeners = function() {
+GussController.prototype.bind_event_listeners = function() {
 
     // build new gus click event
     document.getElementById('build').addEventListener('click', function(e) {
+
         console.log( "[ CLICK EVENT ]" );
         e.preventDefault();
-        this.authorize_access_token();
+
+        /* 
+        ** 
+        **  if the token is not expired
+        **  then authorize with immediate=true
+        **  which will bypass the popup
+        **  else authorize with immediate=false
+        **  to trigger popup
+        **
+        */
+        var now = new Date().getTime();
+        if ( now < this.token_expirey ) {
+            this.authorize_access_token( true );
+        }
+        else {
+            this.authorize_access_token( false );
+        }
+
     }.bind( this ), false);
 
 };
@@ -53,7 +72,7 @@ MainController.prototype.bind_event_listeners = function() {
 **  a URL redirect query params
 **
 */
-MainController.prototype.init = function() {
+GussController.prototype.init = function() {
     console.log( "[ INIT ]" );
     gapi.client.setApiKey( this.clientID );
 
@@ -73,7 +92,7 @@ MainController.prototype.init = function() {
 **  a URL redirect query params
 **
 */
-MainController.prototype.is_access_token_cb = function() {
+GussController.prototype.is_access_token_cb = function() {
     console.log( "[ IS_ACCESS_TOKEN ]" );
 
     // if query params exist, then attempt to get access_token key
@@ -96,7 +115,7 @@ MainController.prototype.is_access_token_cb = function() {
 };
 
 
-MainController.prototype.set_access_token = function() {
+GussController.prototype.set_access_token = function() {
     console.log( "[ SET_ACCESS_TOKEN ]" );
 
     gapi.auth.setToken( this.access_token );
@@ -112,7 +131,7 @@ MainController.prototype.set_access_token = function() {
 **  a URL redirect query params
 **
 */
-MainController.prototype.remove_query_params = function() {
+GussController.prototype.remove_query_params = function() {
     console.log( "[ REMOVE_QUERY_PARAMS ]" );
 
     /*
@@ -144,33 +163,36 @@ MainController.prototype.remove_query_params = function() {
 **  clicking on the button 'Build New Gus'
 **
 */
-MainController.prototype.authorize_access_token = function() {
-    console.log( "[ AUTHORIZE_ACCESS_TOKEN ]" );
+GussController.prototype.authorize_access_token = function( immediate, force_ui ) {
+    console.log( "[ AUTHORIZE_ACCESS_TOKEN ]: immediate = ", immediate );
 
     gapi.auth.authorize({
         client_id: this.clientID, 
         scope: this.scope, 
-        immediate: true
+        immediate: ( typeof immediate !== 'undefined' ) ? immediate : false,
         }, 
         this.qc_access_token.bind( this )
     );
 
 };
 
-MainController.prototype.qc_access_token = function( token_object ) {
+GussController.prototype.qc_access_token = function( token_object ) {
 
     if ( token_object.error ) {
-        console.error( "[ ERROR ]: token could not be set: ", token_object.error, token_object );
-        return false;
+        console.error( "[ ERROR ]: token could not be set...trying again ", token_object.error, token_object );
+        // reauthorize with immediate=false to force popup
+        this.authorize_access_token( false );
     }
     
+    // set class attributes and expirey time
     this.access_token = token_object.access_token;
     this.set_access_token();
+    this.token_expirey = new Date().setSeconds( token_object.expires_in );
     this.insert_file();
 
 };
 
-MainController.prototype.insert_file = function( ) {
+GussController.prototype.insert_file = function( ) {
     console.log( "[ INSERT_FILE ]" );
 
     var boundary = '-------314159265358979323846';
@@ -220,12 +242,14 @@ MainController.prototype.insert_file = function( ) {
             } ,
             function() {
                 // error
-                console.error( "[ ERROR ]: file could not be created ", arguments ); 
-            }
+                console.error( "[ ERROR ]: file could not be created...retrying ", arguments ); 
+                // reauthorize with immediate=false to force popup
+                this.authorize_access_token( false );     
+            }.bind( this )
         );
 
     }.bind( this ); // end reader.onload
 };
 
 
-App.MainController = MainController;
+App.GussController = GussController;

@@ -1,0 +1,17 @@
+{
+    "name": "guss",
+    "version": "0.0.0",
+    "dependencies": {},
+    "devDependencies": {
+        "FileReader": "^0.10.2",
+        "q": "^1.0.1",
+        "jsdom": "^1.1.0",
+        "tape": "^2.14.0",
+    },
+    "engines": {
+        "node": ">=0.10.0"
+    },
+    "scripts": {
+        "test" : "node test/*.js"
+    }
+}

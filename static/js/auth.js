@@ -1,5 +1,5 @@
 'use strict';
-window.App = window.App || {};
+var App = App || {};
 
 
 /*
@@ -13,8 +13,9 @@ var GussController = function( options ) {
 
     // controller members
     this.scope = "https://www.googleapis.com/auth/drive";
-    this.state = "new_gus";
+    this.state = "constructor";  // tracks state for testing
     this.token_expirey; // set after authorize
+    this.auth_attempts = 0;
     this.clientID = "435183833819-akg5lgthnt46t5ahuqpa0m6hk7hbugf9.apps.googleusercontent.com";
     this.access_token; // set after authorize
     this.str_data = 'lat,lng,column1,data2,another3\n46.75679833,-114.0816879,Lolo,john,something\n46.87333583,-113.9886475,Missoula,sarah,something else\n46.757439,-114.081923,Gas Station,sam,this information can be anything you want!';
@@ -35,6 +36,8 @@ var GussController = function( options ) {
 **
 */
 GussController.prototype.bind_event_listeners = function() {
+    console.log( "[ BIND_EVENT_LISTENERS ]" );
+    this.state = "bind_event_listeners";
 
     // build new gus click event
     document.getElementById('build').addEventListener('click', function(e) {
@@ -165,6 +168,7 @@ GussController.prototype.remove_query_params = function() {
 */
 GussController.prototype.authorize_access_token = function( immediate, force_ui ) {
     console.log( "[ AUTHORIZE_ACCESS_TOKEN ]: immediate = ", immediate );
+    this.state = "authorize_access_token";
 
     gapi.auth.authorize({
         client_id: this.clientID, 
@@ -177,11 +181,16 @@ GussController.prototype.authorize_access_token = function( immediate, force_ui 
 };
 
 GussController.prototype.qc_access_token = function( token_object ) {
+    console.log( "[ QC ACCESS TOKEN ]" );
+    this.state = "qc_acces_token";
 
     if ( token_object.error ) {
         console.error( "[ ERROR ]: token could not be set...trying again ", token_object.error, token_object );
         // reauthorize with immediate=false to force popup
-        this.authorize_access_token( false );
+        if ( this.auth_attempts <= 3 ) {
+            this.authorize_access_token( false );
+            this.auth_attempts += 1;
+        }
     }
     
     // set class attributes and expirey time
@@ -194,6 +203,7 @@ GussController.prototype.qc_access_token = function( token_object ) {
 
 GussController.prototype.insert_file = function( ) {
     console.log( "[ INSERT_FILE ]" );
+    this.state = "insert_file";
 
     var boundary = '-------314159265358979323846';
     var delimiter = "\r\n--" + boundary + "\r\n";
@@ -238,13 +248,18 @@ GussController.prototype.insert_file = function( ) {
         .then( 
             function( file ) {
                 // success
+                this.state = "success";
                 console.log( "[ SUCCESS ]: file created => ", file ); 
-            } ,
+            }.bind( this ) ,
             function() {
                 // error
+                this.state = "error";
                 console.error( "[ ERROR ]: file could not be created...retrying ", arguments ); 
                 // reauthorize with immediate=false to force popup
-                this.authorize_access_token( false );     
+                if ( this.auth_attempts <= 3 ) {
+                    this.authorize_access_token( false );
+                    this.auth_attempts += 1;
+                }
             }.bind( this )
         );
 

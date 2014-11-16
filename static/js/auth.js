@@ -182,14 +182,44 @@ GussController.prototype.qc_access_token = function( token_object ) {
         console.error( "[ ERROR ]: token could not be set...trying again ", token_object.error, token_object );
         // reauthorize with immediate=false to force popup
         this.authorize_access_token( false );
+        return false;
     }
     
     // set class attributes and expirey time
     this.access_token = token_object.access_token;
     this.set_access_token();
     this.token_expirey = new Date().setSeconds( token_object.expires_in );
-    this.insert_file();
+    this.get_or_insert_spreadsheet();
 
+};
+
+
+GussController.prototype.get_or_insert_spreadsheet = function() {
+
+        gapi.client.request({
+            'path': '/drive/v2/files',
+            'method': 'GET',
+            'params': { 
+                q : "title contains 'gus' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false" ,
+                maxResults : "1000" ,
+                access_token : this.access_token 
+            },
+        })
+        .then( 
+            function ( response ) {
+                // success
+                if ( response.result.items.length === 0 ) {
+                    console.log( "[ NO EXISTING FILES ]: creating..." );
+                    this.insert_file();
+                }
+                else {
+                    console.log( "[ FOUND FILES ]: there are", response.result.items.length, "existing files:" , response.result.items  );
+                }
+            }.bind( this ) ,
+            function ( e ) {
+                // error
+                console.error( "[ ERROR ]: error in listing files ", e ); 
+        });
 };
 
 GussController.prototype.insert_file = function( ) {

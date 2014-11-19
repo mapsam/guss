@@ -306,7 +306,7 @@ GussController.prototype.createFolder = function( ) {
        console.log( "[ CREATED FOLDER ] : " + resp.id );
        this.folderID = resp.id; // this doesn't seem to be working ... no access to this within the execute scope?
        this.insert_file();
-   });
+   }.bind( this ));
 };
 
 

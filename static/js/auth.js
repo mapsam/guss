@@ -19,6 +19,8 @@ var GussController = function( options ) {
     this.access_token; // set after authorize
     this.str_data = 'lat,lng,column1,data2,another3\n46.75679833,-114.0816879,Lolo,john,something\n46.87333583,-113.9886475,Missoula,sarah,something else\n46.757439,-114.081923,Gas Station,sam,this information can be anything you want!';
     this.ablob = new Blob( [ this.str_data ], { type : 'text/csv', title : 'GUS TITLE', description : 'MAPPING DB' } );
+    this.folderID; // set after authorize, when id created works
+    
 
     // event listeners
     this.bind_event_listeners();
@@ -200,20 +202,24 @@ GussController.prototype.get_or_insert_spreadsheet = function() {
             'path': '/drive/v2/files',
             'method': 'GET',
             'params': { 
-                q : "title contains 'gus' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false" ,
+                q : "title contains 'gus' and mimeType = 'application/vnd.google-apps.folder' and trashed = false" ,
                 maxResults : "1000" ,
                 access_token : this.access_token 
             },
         })
         .then( 
             function ( response ) {
-                // success
+                // if no gus folder, create one and add file
                 if ( response.result.items.length === 0 ) {
-                    console.log( "[ NO EXISTING FILES ]: creating..." );
-                    this.insert_file();
+                    console.log( "[ NO EXISTING FOLDER ]: creating..." );
+                    // this.createFolder().then(this.insert_file());
+                    this.createFolder();
                 }
+                // otherwise, create a new file within the gus folder id
                 else {
-                    console.log( "[ FOUND FILES ]: there are", response.result.items.length, "existing files:" , response.result.items  );
+                    console.log( "[ FOUND FOLDER ]: there are", response.result.items.length, "existing folders:" , response.result.items  );
+                    this.folderID = response.result.items[0].id;
+                    this.insert_file();
                 }
             }.bind( this ) ,
             function ( e ) {
@@ -237,7 +243,8 @@ GussController.prototype.insert_file = function( ) {
         var metadata = {
           'title': 'GUS TITLE' ,
           'description': 'MAPPING DB' ,
-          'mimeType': contentType
+          'mimeType': contentType,
+          'parents': [{ 'id':this.folderID }]
         };
 
         var base64Data = btoa(reader.result);
@@ -279,6 +286,27 @@ GussController.prototype.insert_file = function( ) {
         );
 
     }.bind( this ); // end reader.onload
+};
+
+GussController.prototype.createFolder = function( ) {
+    var request = gapi.client.request({
+       'path': '/drive/v2/files/',
+       'method': 'POST',
+       'headers': {
+           'Content-Type': 'application/json',
+           'Authorization': 'Bearer ' + this.access_token,             
+       },
+       'body':{
+           "title" : "gus-maps",
+           "mimeType" : "application/vnd.google-apps.folder",
+       }
+    });
+
+   request.execute(function(resp) { 
+       console.log( "[ CREATED FOLDER ] : " + resp.id );
+       this.folderID = resp.id; // this doesn't seem to be working ... no access to this within the execute scope?
+       this.insert_file();
+   });
 };
 
 

@@ -1,21 +1,40 @@
 <html>
   <head>
+    <title>GUSS</title>
+    <link href='http://fonts.googleapis.com/css?family=Lato:300,400,900,400italic' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="/static/css/site.css" />
   </head>
   <body>
-    <a id="build" href="/">Build a new gus</a>
-  <script type="text/javascript" src="static/js/auth.js"></script>
-  <script>
-    /*
-    **
-    **  entry point is a callback to retrieving gapi library
-    **  see <script src="https://apis.google.com/js/client.js?onload=init_app"> above
-    **
-    */
-    function init_app () {
-        window.App = window.App || {};
-        App.guss = new App.GussController();       
-    };
-  </script>
+    <header class="header cf">
+      <div class="container">
+        <h1>GUSS</h1>
+      </div>
+    </header>
+    <div class="container cf">
+      <a id="build" class="btn orange" href="/">Build a new gus</a>
+      <div id="gus-info"></div>
+    </div>
+
+
+
+
+
+
+
+
+    <script type="text/javascript" src="static/js/auth.js"></script>
+    <script>
+      /*
+      **
+      **  entry point is a callback to retrieving gapi library
+      **  see <script src="https://apis.google.com/js/client.js?onload=init_app"> above
+      **
+      */
+      function init_app () {
+          window.App = window.App || {};
+          App.guss = new App.GussController();       
+      };
+    </script>
   <script src="https://apis.google.com/js/client.js?onload=init_app"></script>
   </body>
 </html>

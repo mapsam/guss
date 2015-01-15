@@ -41,7 +41,7 @@ GussController.prototype.bind_event_listeners = function() {
     // build new gus click event
     document.getElementById('build').addEventListener('click', function(e) {
 
-        console.log( "[ CLICK EVENT ]" );
+        console.log( "[ CLICK EVENT: build gus ]" );
         e.preventDefault();
 
         /* 
@@ -195,38 +195,106 @@ GussController.prototype.qc_access_token = function( token_object ) {
 
 };
 
-
+/*
+**
+**  here the app queries your drive for files (includes folders)
+**  with the name containing 'gus', isn't in the trash and is of
+**  MIME Type 'folder'... application/vnd.google-apps.folder.
+**  If the result returns as 0, then a new folder is created with 
+**  createFolder() - and subsequently creates a new gus file with
+**  the blob. If the folder exists, a new file will be created within
+**  that folder.
+**
+*/
 GussController.prototype.get_or_insert_spreadsheet = function() {
 
-        gapi.client.request({
-            'path': '/drive/v2/files',
-            'method': 'GET',
-            'params': { 
-                q : "title contains 'gus' and mimeType = 'application/vnd.google-apps.folder' and trashed = false" ,
-                maxResults : "1000" ,
-                access_token : this.access_token 
-            },
-        })
-        .then( 
-            function ( response ) {
-                // if no gus folder, create one and add file
-                if ( response.result.items.length === 0 ) {
-                    console.log( "[ NO EXISTING FOLDER ]: creating..." );
-                    // this.createFolder().then(this.insert_file());
-                    this.createFolder();
-                }
-                // otherwise, create a new file within the gus folder id
-                else {
-                    console.log( "[ FOUND FOLDER ]: there are", response.result.items.length, "existing folders:" , response.result.items  );
-                    this.folderID = response.result.items[0].id;
-                    this.insert_file();
-                }
-            }.bind( this ) ,
-            function ( e ) {
-                // error
-                console.error( "[ ERROR ]: error in listing files ", e ); 
-        });
+  gapi.client.request({
+    'path': '/drive/v2/files',
+    'method': 'GET',
+    'params': { 
+      q : "title contains 'gus' and mimeType = 'application/vnd.google-apps.folder' and trashed = false" ,
+      maxResults : "1000" ,
+      access_token : this.access_token 
+    },
+  })
+  .then( 
+      function ( response ) {
+          // if no gus folder, create one and add file
+          if ( response.result.items.length === 0 ) {
+              console.log( "[ NO EXISTING FOLDER ]: creating..." );
+              // this.createFolder().then(this.insert_file());
+              this.createFolder(this);
+          }
+          // otherwise, create a new file within the gus folder id
+          else {
+              console.log( "[ FOUND FOLDER ]: there are", response.result.items.length, "existing folders:" , response.result.items  );
+              this.folderID = response.result.items[0].id;
+              this.insert_file();
+              this.show_other_gus_files( this.folderID );
+          }
+      }.bind( this ) ,
+      function ( e ) {
+          // error
+          console.error( "[ ERROR ]: error in listing files ", e ); 
+  });
 };
+
+
+GussController.prototype.show_other_gus_files = function( folder ) {
+  
+  console.log(" [ SEARCHING FOR GUS FILES ] in folder id: " + folder);
+
+  gapi.client.request({
+    'path': '/drive/v2/files/' + folder + '/children',
+    'method': 'GET',
+    'params': {
+      access_token : this.access_token
+    },
+  })
+  .then(
+    function ( response ) {
+      console.log( "[ SUCCESS ]: found", response.result.items.length, "existing GUS files", response.result.items );
+      // create unordered list of other gus files
+      var gusList = document.createElement('ul');
+      gusList.id = 'gus-list';
+      // show metadata of each file
+      for(var i=0; i<response.result.items.length; i++){
+
+        gapi.client.request({
+          'path': '/drive/v2/files/' + response.result.items[i].id,
+          'method': 'GET',
+          'params': {
+            access_token: this.access_token
+          }
+        })
+        .then(
+          function ( file ) {
+            console.log( file );
+            var f = file.result;
+            var d = new Date(f.createdDate);
+            var date = d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + ' ' + d.getMonth() + '/' + d.getDate() + '/' + d.getFullYear();
+            var gusItem = document.createElement('li');
+            gusItem.className = 'gus-item';
+            gusItem.innerHTML = '<a href="'+f.alternateLink+'">'+f.title+'<br><span class="gus-item-id">'+f.id+'</span><br><span class="gus-item-date">Created: '+date+'</span></a>';
+            gusList.appendChild(gusItem);
+          }.bind( this ),
+          function ( e ) {
+            // error
+            console.error( "[ ERROR ]: cannot get single file information" );
+          }
+        )
+
+      }
+
+      document.getElementById('gus-info').appendChild(gusList);
+
+    }.bind( this ),
+    function ( e ) {
+      // error
+      console.error( "[ ERROR ]: cannot list other gus files" );
+    }
+  );
+}
 
 GussController.prototype.insert_file = function( ) {
     console.log( "[ INSERT_FILE ]" );
@@ -275,7 +343,7 @@ GussController.prototype.insert_file = function( ) {
         .then( 
             function( file ) {
                 // success
-                console.log( "[ SUCCESS ]: file created => ", file ); 
+                console.log( "[ SUCCESS ]: file created => ", file );
             } ,
             function() {
                 // error
